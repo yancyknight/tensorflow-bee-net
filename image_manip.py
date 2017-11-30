@@ -21,11 +21,10 @@ image = cv2.imread(args['image'])
 print image
 
 ## display the image for the user
-# cv2.imshow('Loaded Image', image)
+cv2.imshow('Loaded Image', image)
 
 ## read and normalize the image
 normalized_image = (cv2.imread(args['image'])/float(255))
 print normalized_image
 
-# cv2.waitKey(0)
-
+cv2.waitKey(0)

@@ -10,7 +10,7 @@
 #===============================================
 
 import os
-import cv2 # pylint: disable=locally-disabled
+import cv2 
 
 
 # two dictionaries that map integers to images, i.e.,
@@ -28,7 +28,7 @@ NUM_TRAIN_SAMPLES = 0
 NUM_TEST_SAMPLES  = 0
 
 ## define the root directory
-ROOT_DIR = '/home/vladimir/Desktop/nn/nn_data/nn_train/examples/'
+ROOT_DIR = '/home/yancy/Documents/computability/project/data/nn_dev/'
 
 ## read the single bee train images
 YES_BEE_TRAIN = ROOT_DIR + 'single_bee_train'
@@ -88,4 +88,3 @@ print TRAIN_IMAGE_CLASSIFICATIONS
 print TEST_IMAGE_CLASSIFICATIONS
 
 ######################################
-
