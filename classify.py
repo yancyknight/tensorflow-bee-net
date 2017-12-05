@@ -81,12 +81,14 @@ for root, dirs, files in os.walk(NO_BEE_TEST):
             TEST_TARGET.append(int(0))
         NUM_TEST_SAMPLES += 1
 
-print NUM_TRAIN_SAMPLES
-print NUM_TEST_SAMPLES
+# print NUM_TRAIN_SAMPLES
+# print NUM_TEST_SAMPLES
 TRAIN_IMAGE_CLASSIFICATIONS = zip([k for k in TRAIN_IMAGE_DATA.keys()], TRAIN_TARGET)
 TEST_IMAGE_CLASSIFICATIONS = zip([k for k in TEST_IMAGE_DATA.keys()], TEST_TARGET)
-print TRAIN_IMAGE_CLASSIFICATIONS
-print TEST_IMAGE_CLASSIFICATIONS
+# print TRAIN_IMAGE_CLASSIFICATIONS
+# print TEST_IMAGE_CLASSIFICATIONS
+# print TRAIN_TARGET
+# print TEST_TARGET
 
 #===============================================
 # 
@@ -99,7 +101,7 @@ print TEST_IMAGE_CLASSIFICATIONS
 def cnn_model_fn(features, labels, mode):
     """Model function for CNN."""
     # Input Layer
-    input_layer = tf.reshape(features["x"], [-1, 28, 28, 1])
+    input_layer = tf.reshape(features["x"], [-1, 32, 32, 3])
 
     # Convolutional Layer #1
     conv1 = tf.layers.conv2d(
@@ -122,13 +124,13 @@ def cnn_model_fn(features, labels, mode):
     pool2 = tf.layers.max_pooling2d(inputs=conv2, pool_size=[2, 2], strides=2)
 
     # Dense Layer
-    pool2_flat = tf.reshape(pool2, [-1, 7 * 7 * 64])
+    pool2_flat = tf.reshape(pool2, [-1, 8 * 8 * 64])
     dense = tf.layers.dense(inputs=pool2_flat, units=1024, activation=tf.nn.relu)
     dropout = tf.layers.dropout(
         inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
 
     # Logits Layer
-    logits = tf.layers.dense(inputs=dropout, units=10)
+    logits = tf.layers.dense(inputs=dropout, units=2)
 
     predictions = {
         # Generate predictions (for PREDICT and EVAL mode)
@@ -142,9 +144,9 @@ def cnn_model_fn(features, labels, mode):
         return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
     # Calculate Loss (for both TRAIN and EVAL modes)
-    onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=10)
-    loss = tf.losses.softmax_cross_entropy(
-        onehot_labels=onehot_labels, logits=logits)
+    # onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=2)
+    loss = tf.losses.mean_squared_error(
+        labels=labels, predictions=predictions)
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -158,27 +160,47 @@ def cnn_model_fn(features, labels, mode):
     eval_metric_ops = {
         "accuracy": tf.metrics.accuracy(
             labels=labels, predictions=predictions["classes"])}
+
     return tf.estimator.EstimatorSpec(
         mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
-eval_metric_ops = {
-    "accuracy": tf.metrics.accuracy(
-        labels=labels, predictions=predictions["classes"])}
-return tf.estimator.EstimatorSpec(
-    mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
-
 def main(unused_argv):
     # Load training and eval data
-    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    train_data = TRAIN_IMAGE_DATA
-    train_labels = TRAIN_IMAGE_CLASSIFICATIONS
-    eval_data = TEST_IMAGE_CLASSIFICATIONS
-    eval_labels = TEST_IMAGE_CLASSIFICATIONS
+    train_data = np.asarray(TRAIN_IMAGE_DATA)
+    train_labels = np.asarray(TRAIN_TARGET)
+    eval_data = np.asarray(TEST_IMAGE_DATA)
+    eval_labels = np.asarray(TEST_TARGET)
 
-mnist_classifier = tf.estimator.Estimator(
-    model_fn=cnn_model_fn, model_dir="/tmp/mnist_convnet_model")
+    # Create the Estimator
+    bee_classifier = tf.estimator.Estimator(
+        model_fn=cnn_model_fn, model_dir="/tmp/bee_convnet_model")
+
+    # Set up logging for predictions
+    tensors_to_log = {"probabilities": "softmax_tensor"}
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors=tensors_to_log, every_n_iter=50)
+
+    # Train the model
+    train_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": train_data},
+        y=train_labels,
+        batch_size=100,
+        num_epochs=None,
+        shuffle=True)
+
+    bee_classifier.train(
+        input_fn=train_input_fn,
+        steps=20000,
+        hooks=[logging_hook])
+
+    # Evaluate the model and print results
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": eval_data},
+        y=eval_labels,
+        num_epochs=1,
+        shuffle=False)
+    eval_results = bee_classifier.evaluate(input_fn=eval_input_fn)
+    print eval_results
 
 if __name__ == '__main__':
     tf.app.run()
-
-
