@@ -81,10 +81,10 @@ for root, dirs, files in os.walk(NO_BEE_TEST):
             TEST_TARGET.append(int(0))
         NUM_TEST_SAMPLES += 1
 
-# print NUM_TRAIN_SAMPLES
-# print NUM_TEST_SAMPLES
 TRAIN_IMAGE_CLASSIFICATIONS = zip([k for k in TRAIN_IMAGE_DATA.keys()], TRAIN_TARGET)
 TEST_IMAGE_CLASSIFICATIONS = zip([k for k in TEST_IMAGE_DATA.keys()], TEST_TARGET)
+# print NUM_TRAIN_SAMPLES
+# print NUM_TEST_SAMPLES
 # print TRAIN_IMAGE_CLASSIFICATIONS
 # print TEST_IMAGE_CLASSIFICATIONS
 # print TRAIN_TARGET
@@ -144,9 +144,14 @@ def cnn_model_fn(features, labels, mode):
         return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
     # Calculate Loss (for both TRAIN and EVAL modes)
-    # onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=2)
-    loss = tf.losses.mean_squared_error(
-        labels=labels, predictions=predictions)
+    
+    # other option is to use this and get rid of onehot_labels
+    # loss = tf.losses.mean_squared_error(
+        # labels=labels, predictions=predictions)
+
+    onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=2)
+    loss = tf.losses.softmax_cross_entropy(
+        onehot_labels=onehot_labels, logits=logits)
 
     # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
@@ -181,6 +186,10 @@ def main(unused_argv):
         tensors=tensors_to_log, every_n_iter=50)
 
     # Train the model
+    # I'm pretty sure something about my inputs aren't right, so when they go into
+    # x and y here it throws it off. I need to fix the input data to be in the
+    # expected form. 
+    # https://www.tensorflow.org/api_docs/python/tf/estimator/inputs/numpy_input_fn
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
         x={"x": train_data},
         y=train_labels,
