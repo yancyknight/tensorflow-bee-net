@@ -16,8 +16,8 @@ import numpy as np
 
 # two dictionaries that map integers to images, i.e.,
 # 2D numpy array.
-TRAIN_IMAGE_DATA = {}
-TEST_IMAGE_DATA  = {}
+TRAIN_IMAGE_DATA = []
+TEST_IMAGE_DATA  = []
 
 # the train target is an array of 1's
 TRAIN_TARGET = []
@@ -39,7 +39,7 @@ for root, dirs, files in os.walk(YES_BEE_TRAIN):
         if item.endswith('.png'):
             ip = os.path.join(root, item)
             img = (cv2.imread(ip)/float(255))
-            TRAIN_IMAGE_DATA[NUM_TRAIN_SAMPLES] = img
+            TRAIN_IMAGE_DATA.append(img)
             TRAIN_TARGET.append(int(1))
         NUM_TRAIN_SAMPLES +=1
 
@@ -52,8 +52,7 @@ for root, dirs, files in os.walk(YES_BEE_TEST):
         if item.endswith('.png'):
             ip = os.path.join(root, item)
             img = (cv2.imread(ip)/float(255))
-            # print img.shape
-            TEST_IMAGE_DATA[NUM_TEST_SAMPLES] = img
+            TEST_IMAGE_DATA.append(img)
             TEST_TARGET.append(int(1))
         NUM_TEST_SAMPLES += 1
 
@@ -65,7 +64,7 @@ for root, dirs, files in os.walk(NO_BEE_TRAIN):
         if item.endswith('.png'):
             ip = os.path.join(root, item)
             img = (cv2.imread(ip)/float(255))
-            TRAIN_IMAGE_DATA[NUM_TRAIN_SAMPLES] = img
+            TRAIN_IMAGE_DATA.append(img)
             TRAIN_TARGET.append(int(0))
         NUM_TRAIN_SAMPLES += 1
         
@@ -77,18 +76,20 @@ for root, dirs, files in os.walk(NO_BEE_TEST):
         if item.endswith('.png'):
             ip = os.path.join(root, item)
             img = (cv2.imread(ip)/float(255))
-            TEST_IMAGE_DATA[NUM_TEST_SAMPLES] = img
+            TEST_IMAGE_DATA.append(img)
             TEST_TARGET.append(int(0))
         NUM_TEST_SAMPLES += 1
 
-TRAIN_IMAGE_CLASSIFICATIONS = zip([k for k in TRAIN_IMAGE_DATA.keys()], TRAIN_TARGET)
-TEST_IMAGE_CLASSIFICATIONS = zip([k for k in TEST_IMAGE_DATA.keys()], TEST_TARGET)
+# TRAIN_IMAGE_CLASSIFICATIONS = zip([k for k in TRAIN_IMAGE_DATA.keys()], TRAIN_TARGET)
+# TEST_IMAGE_CLASSIFICATIONS = zip([k for k in TEST_IMAGE_DATA.keys()], TEST_TARGET)
 # print NUM_TRAIN_SAMPLES
 # print NUM_TEST_SAMPLES
 # print TRAIN_IMAGE_CLASSIFICATIONS
 # print TEST_IMAGE_CLASSIFICATIONS
 # print TRAIN_TARGET
 # print TEST_TARGET
+# print TRAIN_IMAGE_DATA
+# print TEST_IMAGE_DATA
 
 #===============================================
 # 
@@ -100,17 +101,21 @@ TEST_IMAGE_CLASSIFICATIONS = zip([k for k in TEST_IMAGE_DATA.keys()], TEST_TARGE
 
 def cnn_model_fn(features, labels, mode):
     """Model function for CNN."""
+
+    print 'do reshape'
     # Input Layer
     input_layer = tf.reshape(features["x"], [-1, 32, 32, 3])
 
+    print 'do convolution'
     # Convolutional Layer #1
     conv1 = tf.layers.conv2d(
-        inputs=input_layer,
+        inputs=tf.cast(input_layer, tf.float32),
         filters=32,
         kernel_size=[5, 5],
         padding="same",
         activation=tf.nn.relu)
 
+    print 'do pool'
     # Pooling Layer #1
     pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
 
@@ -175,15 +180,18 @@ def main(unused_argv):
     train_labels = np.asarray(TRAIN_TARGET)
     eval_data = np.asarray(TEST_IMAGE_DATA)
     eval_labels = np.asarray(TEST_TARGET)
+    print 'finish loading data'
 
     # Create the Estimator
     bee_classifier = tf.estimator.Estimator(
         model_fn=cnn_model_fn, model_dir="/tmp/bee_convnet_model")
+    print 'finish create estimator'
 
     # Set up logging for predictions
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log, every_n_iter=50)
+    print 'finish logging setup'
 
     # Train the model
     # I'm pretty sure something about my inputs aren't right, so when they go into
@@ -196,11 +204,14 @@ def main(unused_argv):
         batch_size=100,
         num_epochs=None,
         shuffle=True)
+    print 'finish train_input_fn'
 
+    print 'start training'
     bee_classifier.train(
         input_fn=train_input_fn,
         steps=20000,
         hooks=[logging_hook])
+    print 'finish training'
 
     # Evaluate the model and print results
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
