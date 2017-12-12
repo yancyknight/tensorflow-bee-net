@@ -7,15 +7,11 @@
 #===============================================
 
 from __future__ import division
-# import time
 import os
 import cv2 
 import tensorflow as tf
 import numpy as np
 
-
-# two dictionaries that map integers to images, i.e.,
-# 2D numpy array.
 TRAIN_IMAGE_DATA = []
 TEST_IMAGE_DATA  = []
 
@@ -29,7 +25,7 @@ NUM_TRAIN_SAMPLES = 0
 NUM_TEST_SAMPLES  = 0
 
 ## define the root directory
-ROOT_DIR = '/home/yancy/Documents/computability/project/data/nn_dev/'
+ROOT_DIR = '/home/yancy/Documents/computability/project/data/nn_train/'
 
 ## read the single bee train images
 YES_BEE_TRAIN = ROOT_DIR + 'single_bee_train'
@@ -102,11 +98,9 @@ for root, dirs, files in os.walk(NO_BEE_TEST):
 def cnn_model_fn(features, labels, mode):
     """Model function for CNN."""
 
-    print 'do reshape'
     # Input Layer
     input_layer = tf.reshape(features["x"], [-1, 32, 32, 3])
 
-    print 'do convolution'
     # Convolutional Layer #1
     conv1 = tf.layers.conv2d(
         inputs=tf.cast(input_layer, tf.float32),
@@ -115,7 +109,6 @@ def cnn_model_fn(features, labels, mode):
         padding="same",
         activation=tf.nn.relu)
 
-    print 'do pool'
     # Pooling Layer #1
     pool1 = tf.layers.max_pooling2d(inputs=conv1, pool_size=[2, 2], strides=2)
 
@@ -180,38 +173,28 @@ def main(unused_argv):
     train_labels = np.asarray(TRAIN_TARGET)
     eval_data = np.asarray(TEST_IMAGE_DATA)
     eval_labels = np.asarray(TEST_TARGET)
-    print 'finish loading data'
 
     # Create the Estimator
     bee_classifier = tf.estimator.Estimator(
         model_fn=cnn_model_fn, model_dir="/tmp/bee_convnet_model")
-    print 'finish create estimator'
 
     # Set up logging for predictions
     tensors_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(
         tensors=tensors_to_log, every_n_iter=50)
-    print 'finish logging setup'
 
     # Train the model
-    # I'm pretty sure something about my inputs aren't right, so when they go into
-    # x and y here it throws it off. I need to fix the input data to be in the
-    # expected form. 
-    # https://www.tensorflow.org/api_docs/python/tf/estimator/inputs/numpy_input_fn
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
         x={"x": train_data},
         y=train_labels,
         batch_size=100,
         num_epochs=None,
         shuffle=True)
-    print 'finish train_input_fn'
 
-    print 'start training'
     bee_classifier.train(
         input_fn=train_input_fn,
         steps=20000,
         hooks=[logging_hook])
-    print 'finish training'
 
     # Evaluate the model and print results
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
