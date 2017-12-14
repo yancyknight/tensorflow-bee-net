@@ -39,7 +39,6 @@ for root, dirs, files in os.walk(YES_BEE_TRAIN):
             TRAIN_TARGET.append(int(1))
         NUM_TRAIN_SAMPLES +=1
 
-
 ## read the single bee test images
 YES_BEE_TEST = ROOT_DIR + 'single_bee_test'
 
@@ -75,17 +74,6 @@ for root, dirs, files in os.walk(NO_BEE_TEST):
             TEST_IMAGE_DATA.append(img)
             TEST_TARGET.append(int(0))
         NUM_TEST_SAMPLES += 1
-
-# TRAIN_IMAGE_CLASSIFICATIONS = zip([k for k in TRAIN_IMAGE_DATA.keys()], TRAIN_TARGET)
-# TEST_IMAGE_CLASSIFICATIONS = zip([k for k in TEST_IMAGE_DATA.keys()], TEST_TARGET)
-# print NUM_TRAIN_SAMPLES
-# print NUM_TEST_SAMPLES
-# print TRAIN_IMAGE_CLASSIFICATIONS
-# print TEST_IMAGE_CLASSIFICATIONS
-# print TRAIN_TARGET
-# print TEST_TARGET
-# print TRAIN_IMAGE_DATA
-# print TEST_IMAGE_DATA
 
 #===============================================
 # 
@@ -143,10 +131,6 @@ def cnn_model_fn(features, labels, mode):
 
     # Calculate Loss (for both TRAIN and EVAL modes)
     
-    # other option is to use this and get rid of onehot_labels
-    # loss = tf.losses.mean_squared_error(
-        # labels=labels, predictions=predictions)
-
     onehot_labels = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=2)
     loss = tf.losses.softmax_cross_entropy(
         onehot_labels=onehot_labels, logits=logits)
